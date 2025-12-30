@@ -1,0 +1,31 @@
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+
+# Android
+*.apk
+*.aab
+*.android_dex
+*.class
+.gradle/
+local.properties
+.externalNativeBuild
+*.utmp
+
+# IDEs
+.vs/
+.idea/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+
+# OS
+.DS_Store
+Thumbs.db

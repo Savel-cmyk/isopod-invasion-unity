@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7541540957849262024}
   - component: {fileID: 2483411765463430698}
+  - component: {fileID: 1815416911625823115}
   m_Layer: 0
   m_Name: Box
   m_TagString: Untagged
@@ -89,5 +90,23 @@ SpriteRenderer:
   m_Size: {x: 1.82, y: 1.64}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_SpriteSortPoint: 0
+--- !u!114 &1815416911625823115
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5775074919149722042}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d4b34f0507e07046bad96eda1070d58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BoxController
+  maxHealth: 100
+  fullHealthSprite: {fileID: 21300000, guid: 64dab170e08a86a4dac256b74c3cf5a8, type: 3}
+  mediumHealthSprite: {fileID: 21300000, guid: 5ca6bc8e2de7c044ea7de2e5082e1aa3, type: 3}
+  lowHealthSprite: {fileID: 21300000, guid: 6054fe0edc253984cbbc69558a3e55bd, type: 3}
+  brokenSprite: {fileID: 21300000, guid: 412ba3e9767a2da4aadc01dd853d0043, type: 3}
+  damagePerSecond: 10

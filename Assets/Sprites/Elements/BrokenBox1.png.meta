@@ -1,13 +1,10 @@
 fileFormatVersion: 2
-guid: ab23fa35aeaa3bd439e5d4a2958943cc
+guid: 5ca6bc8e2de7c044ea7de2e5082e1aa3
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8944015044624920115
-    second: bug_stain_resized_0
-  - first:
-      213: -3397281521822014471
-    second: bug_stain_resized_1
+      213: 3078131586546047714
+    second: BrokenBox1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -129,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: bug_stain_resized_0
+      name: BrokenBox1_0
       rect:
         serializedVersion: 2
-        x: 5
-        y: 3
-        width: 142
-        height: 134
+        x: 0
+        y: 0
+        width: 181
+        height: 165
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -144,30 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 33e2e90bb468f1c70800000000000000
-      internalID: 8944015044624920115
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: bug_stain_resized_1
-      rect:
-        serializedVersion: 2
-        x: 19
-        y: 123
-        width: 13
-        height: 15
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 9f3ecc9947e6ad0d0800000000000000
-      internalID: -3397281521822014471
+      spriteID: 2ea9cfb8e58b7ba20800000000000000
+      internalID: 3078131586546047714
       vertices: []
       indices: 
       edges: []
@@ -186,8 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      bug_stain_resized_0: 8944015044624920115
-      bug_stain_resized_1: -3397281521822014471
+      BrokenBox1_0: 3078131586546047714
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

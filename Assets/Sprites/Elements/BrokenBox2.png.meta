@@ -1,13 +1,10 @@
 fileFormatVersion: 2
-guid: ab23fa35aeaa3bd439e5d4a2958943cc
+guid: 6054fe0edc253984cbbc69558a3e55bd
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8944015044624920115
-    second: bug_stain_resized_0
-  - first:
-      213: -3397281521822014471
-    second: bug_stain_resized_1
+      213: -7036142959751533534
+    second: BrokenBox2_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -129,13 +126,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: bug_stain_resized_0
+      name: BrokenBox2_0
       rect:
         serializedVersion: 2
         x: 5
-        y: 3
-        width: 142
-        height: 134
+        y: 0
+        width: 177
+        height: 165
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -144,30 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 33e2e90bb468f1c70800000000000000
-      internalID: 8944015044624920115
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: bug_stain_resized_1
-      rect:
-        serializedVersion: 2
-        x: 19
-        y: 123
-        width: 13
-        height: 15
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 9f3ecc9947e6ad0d0800000000000000
-      internalID: -3397281521822014471
+      spriteID: 22ce427d1499a5e90800000000000000
+      internalID: -7036142959751533534
       vertices: []
       indices: 
       edges: []
@@ -186,8 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      bug_stain_resized_0: 8944015044624920115
-      bug_stain_resized_1: -3397281521822014471
+      BrokenBox2_0: -7036142959751533534
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

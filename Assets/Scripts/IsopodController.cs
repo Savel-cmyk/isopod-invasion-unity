@@ -1,13 +1,15 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using System.Collections;
 
 public class IsopodController : MonoBehaviour
 {
     // === Настройки в редакторе ===
     [Header("Movement Settings")]
-    public float upSpeed = 0.5f; // Значение по умолчанию
+    public float upSpeed = 0.5f;
     public Transform targetBox;
     public int assignedColumn = 0;
+    public Vector3 spawnPosition; // Добавлено public для доступа из GameController
 
     [Header("Health Settings")]
     public int maxHealth = 100;
@@ -24,23 +26,31 @@ public class IsopodController : MonoBehaviour
     public AudioClip hitSound;
     public AudioClip killSound;
 
+    [Header("Box Damage Settings")]
+    public int damageToBoxPerSecond = 10;
+
+    [Header("Fall Settings")]
+    public float fallSpeed = 3f; // Скорость падения
+
     // === Внутренние переменные ===
     private AudioSource audioSource;
     private SpriteRenderer spriteRenderer;
     private bool isAlive = true;
     private bool hasReachedTarget = false;
-    private Vector3 spawnPosition;
+    private BoxController currentBoxController;
 
-    // Контроль движения - публичное поле для отладки
+    // Новые переменные для падения
+    private bool isFalling = false;
+    private bool shouldDespawn = false;
+
+    // Ссылка на GameController
+    [HideInInspector] public GameController gameController;
     [HideInInspector] public bool canMove = false;
 
     void Awake()
     {
         audioSource = GetComponent<AudioSource>();
         spriteRenderer = GetComponent<SpriteRenderer>();
-
-        // НЕ сохраняем позицию здесь!
-        // initialPosition будет установлена позже
 
         Camera mainCamera = Camera.main;
         if (mainCamera != null && mainCamera.GetComponent<Physics2DRaycaster>() == null)
@@ -52,56 +62,138 @@ public class IsopodController : MonoBehaviour
     void Start()
     {
         currentHealth = maxHealth;
-        // Теперь сохраняем позицию в Start(), после того как GameController установил её
         spawnPosition = transform.position;
         UpdateSprite();
-
-        Debug.Log($"Isopod initialized at: {spawnPosition}");
     }
 
     void Update()
     {
-        // ДЛЯ ОТЛАДКИ: показываем состояние
-        if (Input.GetKeyDown(KeyCode.D))
+        // Если жук падает - обрабатываем падение
+        if (isFalling)
         {
-            Debug.Log($"Isopod Debug - CanMove: {canMove}, Alive: {isAlive}, HasReached: {hasReachedTarget}, Target: {targetBox?.name}");
+            HandleFalling();
         }
     }
 
     void FixedUpdate()
     {
-        // Двигаемся только если можем
-        if (!canMove)
-        {
-            // Debug.Log("Can't move yet"); // Раскомментируйте для отладки
-            return;
-        }
+        if (!canMove || isFalling) return;
 
         if (isAlive && !hasReachedTarget && targetBox != null)
         {
-            // Движение с учетом Time.deltaTime
             float moveAmount = upSpeed * Time.fixedDeltaTime;
             transform.Translate(0, moveAmount, 0);
-
-            // Debug.Log($"Moving up: {moveAmount}, Pos: {transform.position.y}, Target: {targetBox.position.y}");
 
             if (transform.position.y >= targetBox.position.y)
             {
                 hasReachedTarget = true;
-                Debug.Log($"Reached target box at {targetBox.position.y}");
+                OnReachedBox();
             }
         }
-        else if (targetBox == null)
+    }
+
+    void HandleFalling()
+    {
+        // Двигаемся вниз
+        transform.Translate(0, -fallSpeed * Time.deltaTime, 0);
+
+        // Проверяем, упал ли жук достаточно низко для деспавна
+        if (transform.position.y < spawnPosition.y - 10f) // На 10 единиц ниже точки спавна
         {
-            Debug.LogWarning("Target box is null!");
+            Despawn();
         }
+    }
+
+    void Despawn()
+    {
+        Debug.Log($"{name} despawned (fell off screen)");
+
+        // Останавливаем атаку если была
+        if (currentBoxController != null)
+        {
+            currentBoxController.StopTakingDamage();
+            currentBoxController = null;
+        }
+
+        // Отключаем жука
+        gameObject.SetActive(false);
+
+        // Можно уничтожить или оставить для возможного респавна
+        // Destroy(gameObject);
+    }
+
+    void OnReachedBox()
+    {
+        Debug.Log($"{name} reached the box");
+
+        if (targetBox != null)
+        {
+            currentBoxController = targetBox.GetComponent<BoxController>();
+            if (currentBoxController != null)
+            {
+                currentBoxController.StartTakingDamage(this);
+            }
+        }
+    }
+
+    // Вызывается когда текущая коробка ломается
+    public void OnTargetBoxBroken()
+    {
+        if (currentBoxController != null)
+        {
+            currentBoxController.StopTakingDamage();
+            currentBoxController = null;
+        }
+
+        // Ищем новую ближайшую коробку
+        if (gameController != null)
+        {
+            gameController.AssignNearestBoxToIsopod(this, assignedColumn);
+
+            // Если AssignNearestBoxToIsopod не назначил новую коробку,
+            // значит все коробки в колонке сломаны
+            if (targetBox == null)
+            {
+                StartFalling();
+            }
+            else
+            {
+                // Есть новая коробка - сбрасываем состояние движения
+                hasReachedTarget = false;
+            }
+        }
+    }
+
+    // Вызывается из GameController когда все коробки в колонке сломаны
+    public void OnAllBoxesBroken()
+    {
+        Debug.Log($"{name}: All boxes in column {assignedColumn} are broken!");
+        StartFalling();
+    }
+
+    void StartFalling()
+    {
+        isFalling = true;
+        canMove = false;
+        hasReachedTarget = true;
+
+        // Останавливаем атаку если была
+        if (currentBoxController != null)
+        {
+            currentBoxController.StopTakingDamage();
+            currentBoxController = null;
+        }
+
+        // Сбрасываем target
+        targetBox = null;
+
+        Debug.Log($"{name} started falling");
     }
 
     private void OnMouseDown()
     {
-        if (!isAlive || !canMove) return;
+        if (!isAlive || !canMove || isFalling) return;
 
-        Debug.Log("Isopod clicked!");
         TakeDamage(damagePerClick);
         PlaySound(hitSound);
     }
@@ -111,7 +203,6 @@ public class IsopodController : MonoBehaviour
         if (!isAlive) return;
 
         currentHealth -= damage;
-        Debug.Log($"{gameObject.name} health: {currentHealth}/{maxHealth}");
 
         if (currentHealth <= 0)
         {
@@ -156,8 +247,6 @@ public class IsopodController : MonoBehaviour
         if (!isAlive) return;
 
         isAlive = false;
-        Debug.Log($"{gameObject.name} died!");
-
         UpdateSprite();
         PlaySound(killSound);
 
@@ -166,35 +255,26 @@ public class IsopodController : MonoBehaviour
 
     void Respawn()
     {
-        // Сбрасываем все параметры
         currentHealth = maxHealth;
         isAlive = true;
         hasReachedTarget = false;
-
-        // Возвращаемся на позицию спавна
+        isFalling = false;
         transform.position = spawnPosition;
 
-        // Назначаем новую случайную коробку
-        AssignNewRandomBox();
+        // Останавливаем атаку
+        if (currentBoxController != null)
+        {
+            currentBoxController.StopTakingDamage();
+            currentBoxController = null;
+        }
 
-        // Устанавливаем начальный спрайт
         UpdateSprite();
 
-        Debug.Log($"{gameObject.name} respawned at position: {spawnPosition}");
-    }
-
-    void AssignNewRandomBox()
-    {
-        // Находим GameController
-        GameController gameController = FindObjectOfType<GameController>();
+        // Просим GameController назначить новую коробку
         if (gameController != null)
         {
-            // Вызываем публичный метод для назначения случайной коробки
-            gameController.AssignRandomBoxToIsopod(this, assignedColumn);
-        }
-        else
-        {
-            Debug.LogWarning("GameController not found for box assignment");
+            gameController.AssignNearestBoxToIsopod(this, assignedColumn);
+            canMove = true;
         }
     }
 
@@ -206,24 +286,8 @@ public class IsopodController : MonoBehaviour
         }
     }
 
-    // Метод для включения/выключения движения
     public void SetGameRunning(bool running)
     {
         canMove = running;
-        Debug.Log($"Isopod canMove set to: {running}");
-
-        // Если игра началась, убедимся что targetBox назначен
-        if (running && targetBox == null)
-        {
-            Debug.LogWarning("Isopod has no target box assigned!");
-
-            // Попробуем найти коробку автоматически
-            GameObject foundBox = GameObject.Find("Box_4_0");
-            if (foundBox != null)
-            {
-                targetBox = foundBox.transform;
-                Debug.Log($"Auto-assigned target: {foundBox.name}");
-            }
-        }
     }
 }

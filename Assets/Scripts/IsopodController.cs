@@ -47,6 +47,10 @@ public class IsopodController : MonoBehaviour
     [HideInInspector] public GameController gameController;
     [HideInInspector] public bool canMove = false;
 
+    // Добавьте это в начало класса (после других полей):
+    public delegate void IsopodDespawnedHandler();
+    public event IsopodDespawnedHandler OnIsopodDespawned;
+
     void Awake()
     {
         audioSource = GetComponent<AudioSource>();
@@ -77,7 +81,8 @@ public class IsopodController : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (!canMove || isFalling) return;
+        // Проверяем активна ли игра
+        if (!canMove || isFalling || !IsGameActive()) return;
 
         if (isAlive && !hasReachedTarget && targetBox != null)
         {
@@ -90,6 +95,25 @@ public class IsopodController : MonoBehaviour
                 OnReachedBox();
             }
         }
+    }
+
+    private bool IsGameActive()
+    {
+        if (gameController != null)
+        {
+            return gameController.IsGameActive();
+        }
+        return false;
+    }
+
+    private void OnMouseDown()
+    {
+        // Можно кликать только если игра активна
+        if (!isAlive || !canMove || isFalling || !IsGameActive()) return;
+
+        Debug.Log("Isopod clicked!");
+        TakeDamage(damagePerClick);
+        PlaySound(hitSound);
     }
 
     void HandleFalling()
@@ -115,11 +139,11 @@ public class IsopodController : MonoBehaviour
             currentBoxController = null;
         }
 
+        // Вызываем событие деспавна
+        OnIsopodDespawned?.Invoke();
+
         // Отключаем жука
         gameObject.SetActive(false);
-
-        // Можно уничтожить или оставить для возможного респавна
-        // Destroy(gameObject);
     }
 
     void OnReachedBox()
@@ -190,14 +214,6 @@ public class IsopodController : MonoBehaviour
         Debug.Log($"{name} started falling");
     }
 
-    private void OnMouseDown()
-    {
-        if (!isAlive || !canMove || isFalling) return;
-
-        TakeDamage(damagePerClick);
-        PlaySound(hitSound);
-    }
-
     void TakeDamage(int damage)
     {
         if (!isAlive) return;
@@ -250,6 +266,12 @@ public class IsopodController : MonoBehaviour
         UpdateSprite();
         PlaySound(killSound);
 
+        // Уведомляем GameController об убийстве
+        if (gameController != null)
+        {
+            gameController.AddKill();
+        }
+
         Invoke("Respawn", 1f);
     }
 
@@ -276,6 +298,10 @@ public class IsopodController : MonoBehaviour
             gameController.AssignNearestBoxToIsopod(this, assignedColumn);
             canMove = true;
         }
+
+        // Уведомляем GameController что жук вернулся
+        // (если нужно отслеживать активных жуков)
+        // gameController?.HandleIsopodRespawned();
     }
 
     void PlaySound(AudioClip clip)
@@ -284,6 +310,49 @@ public class IsopodController : MonoBehaviour
         {
             audioSource.PlayOneShot(clip);
         }
+    }
+
+    public void ForceFall()
+    {
+        if (isFalling) return; // Уже падает
+
+        Debug.Log($"{name} forced to fall");
+
+        // Останавливаем атаку на коробку
+        if (currentBoxController != null)
+        {
+            currentBoxController.StopTakingDamage();
+            currentBoxController = null;
+        }
+
+        // Запускаем падение
+        StartFalling();
+
+        // Можно добавить эффект (например, изменение цвета)
+        if (spriteRenderer != null)
+        {
+            // Временно меняем цвет на красный
+            StartCoroutine(FlashRed());
+        }
+    }
+
+    // Эффект мигания при падении
+    IEnumerator FlashRed()
+    {
+        Color originalColor = spriteRenderer.color;
+        spriteRenderer.color = Color.red;
+
+        yield return new WaitForSeconds(0.3f);
+
+        spriteRenderer.color = originalColor;
+
+        yield return new WaitForSeconds(0.3f);
+
+        spriteRenderer.color = Color.red;
+
+        yield return new WaitForSeconds(0.3f);
+
+        spriteRenderer.color = originalColor;
     }
 
     public void SetGameRunning(bool running)

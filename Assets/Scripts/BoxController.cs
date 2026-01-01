@@ -8,34 +8,34 @@ public class BoxController : MonoBehaviour
     private int currentHealth;
 
     [Header("Sprites for Health States")]
-    public Sprite fullHealthSprite;    // 100-67%
-    public Sprite mediumHealthSprite;  // 66-34%
-    public Sprite lowHealthSprite;     // 33-1%
-    public Sprite brokenSprite;        // 0% - сломанная коробка
+    public Sprite fullHealthSprite;
+    public Sprite mediumHealthSprite;
+    public Sprite lowHealthSprite;
+    public Sprite brokenSprite;
 
     [Header("Damage Settings")]
-    public int damagePerSecond = 10;   // Урон в секунду от жука
+    public int damagePerSecond = 10;
 
-    // Ссылки на компоненты
     private SpriteRenderer spriteRenderer;
     private bool isBroken = false;
-
-    // Ссылка на жука, который атакует эту коробку
     private IsopodController attackingIsopod;
     private Vector3 originalScale;
-
     private Coroutine damageCoroutine;
+
+    void Start()
+    {
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        currentHealth = maxHealth;
+        originalScale = transform.localScale;
+        UpdateBoxSprite();
+    }
 
     public void StartTakingDamage(IsopodController isopod)
     {
         if (!isBroken && damageCoroutine == null)
         {
             attackingIsopod = isopod;
-
-            // Запускаем корутину для урона раз в секунду
             damageCoroutine = StartCoroutine(DamageOverTime());
-
-            Debug.Log($"Box {name} started taking {damagePerSecond} damage per second");
         }
     }
 
@@ -53,35 +53,18 @@ public class BoxController : MonoBehaviour
     {
         while (!isBroken && attackingIsopod != null)
         {
-            // Ждем 1 секунду
             yield return new WaitForSeconds(1f);
-
             if (!isBroken && attackingIsopod != null)
             {
-                // Наносим урон раз в секунду
                 TakeDamage(damagePerSecond);
             }
         }
-    }
-
-    void Start()
-    {
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        currentHealth = maxHealth;
-
-        // Сохраняем оригинальный размер
-        originalScale = transform.localScale;
-
-        UpdateBoxSprite();
-
-        Debug.Log($"Box {name} created with {currentHealth} HP");
     }
 
     public void TakeDamage(float damage)
     {
         if (isBroken) return;
 
-        // Преобразуем float в int, округляя вверх
         int intDamage = Mathf.CeilToInt(damage);
         currentHealth -= intDamage;
 
@@ -119,9 +102,7 @@ public class BoxController : MonoBehaviour
             spriteRenderer.sprite = brokenSprite;
         }
 
-        // Принудительно устанавливаем одинаковый размер
         transform.localScale = originalScale;
-
         spriteRenderer.sortingLayerName = "Boxes";
         spriteRenderer.sortingOrder = 1;
     }
@@ -131,35 +112,17 @@ public class BoxController : MonoBehaviour
         isBroken = true;
         UpdateBoxSprite();
 
-        // Отключаем коллайдер, чтобы жук не взаимодействовал с сломанной коробкой
         Collider2D collider = GetComponent<Collider2D>();
-        if (collider != null)
-        {
-            collider.enabled = false;
-        }
+        if (collider != null) collider.enabled = false;
 
-        Debug.Log($"Box {name} is broken!");
-
-        // Уведомляем жука, что коробка сломана
         if (attackingIsopod != null)
         {
             attackingIsopod.OnTargetBoxBroken();
         }
     }
 
-    // Геттеры для проверки состояния
     public bool IsBroken()
     {
         return isBroken;
-    }
-
-    public float GetHealthPercentage()
-    {
-        return (float)currentHealth / maxHealth * 100;
-    }
-
-    public int GetCurrentHealth()
-    {
-        return currentHealth;
     }
 }

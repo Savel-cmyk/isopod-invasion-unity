@@ -38,10 +38,12 @@ public class IsopodController : MonoBehaviour
     private bool isAlive = true;
     private bool hasReachedTarget = false;
     private BoxController currentBoxController;
+    // Добавьте эту переменную для отслеживания Invoke
+    private bool isRespawning = false;
+    private Coroutine respawnCoroutine;
 
     // Новые переменные для падения
     private bool isFalling = false;
-    private bool shouldDespawn = false;
 
     // Ссылка на GameController
     [HideInInspector] public GameController gameController;
@@ -195,11 +197,97 @@ public class IsopodController : MonoBehaviour
         StartFalling();
     }
 
+    void Die()
+    {
+        if (!isAlive) return;
+
+        isAlive = false;
+        UpdateSprite();
+        PlaySound(killSound);
+
+        // Уведомляем GameController об убийстве
+        if (gameController != null)
+        {
+            gameController.AddKill();
+        }
+
+        // Заменяем Invoke на корутину для возможности отмены
+        respawnCoroutine = StartCoroutine(RespawnAfterDelay(1f));
+    }
+
+    // Новая корутина для респавна
+    IEnumerator RespawnAfterDelay(float delay)
+    {
+        isRespawning = true;
+        yield return new WaitForSeconds(delay);
+
+        // Проверяем что игра ещё активна
+        if (isRespawning && IsGameActive())
+        {
+            Respawn();
+        }
+        isRespawning = false;
+    }
+
+    // Новый метод: отмена респавна
+    public void CancelRespawn()
+    {
+        if (respawnCoroutine != null)
+        {
+            StopCoroutine(respawnCoroutine);
+            respawnCoroutine = null;
+        }
+        isRespawning = false;
+    }
+
+    // Обновите ForceFall() для отмены респавна
+    public void ForceFall()
+    {
+        if (isFalling) return;
+
+        Debug.Log($"{name} forced to fall");
+
+        // Отменяем респавн если он запланирован
+        CancelRespawn();
+
+        // Если жук уже "мёртв" (ожидает респавна), сразу деспавним
+        if (!isAlive)
+        {
+            Debug.Log($"{name} was dead, despawning immediately");
+            DespawnImmediately();
+            return;
+        }
+
+        // Останавливаем атаку на коробку
+        if (currentBoxController != null)
+        {
+            currentBoxController.StopTakingDamage();
+            currentBoxController = null;
+        }
+
+        // Запускаем падение
+        StartFalling();
+    }
+
+    // Новый метод: немедленный деспавн
+    void DespawnImmediately()
+    {
+        // Отключаем жука
+        gameObject.SetActive(false);
+
+        // Уведомляем GameController
+        OnIsopodDespawned?.Invoke();
+    }
+
+    // Обновите StartFalling() для отмены респавна
     void StartFalling()
     {
         isFalling = true;
         canMove = false;
         hasReachedTarget = true;
+
+        // Отменяем респавн если он запланирован
+        CancelRespawn();
 
         // Останавливаем атаку если была
         if (currentBoxController != null)
@@ -258,25 +346,14 @@ public class IsopodController : MonoBehaviour
         spriteRenderer.sortingOrder = 10;
     }
 
-    void Die()
-    {
-        if (!isAlive) return;
-
-        isAlive = false;
-        UpdateSprite();
-        PlaySound(killSound);
-
-        // Уведомляем GameController об убийстве
-        if (gameController != null)
-        {
-            gameController.AddKill();
-        }
-
-        Invoke("Respawn", 1f);
-    }
-
     void Respawn()
     {
+        if (gameController != null && !gameController.IsGameActive())
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
         currentHealth = maxHealth;
         isAlive = true;
         hasReachedTarget = false;
@@ -298,10 +375,6 @@ public class IsopodController : MonoBehaviour
             gameController.AssignNearestBoxToIsopod(this, assignedColumn);
             canMove = true;
         }
-
-        // Уведомляем GameController что жук вернулся
-        // (если нужно отслеживать активных жуков)
-        // gameController?.HandleIsopodRespawned();
     }
 
     void PlaySound(AudioClip clip)
@@ -310,49 +383,6 @@ public class IsopodController : MonoBehaviour
         {
             audioSource.PlayOneShot(clip);
         }
-    }
-
-    public void ForceFall()
-    {
-        if (isFalling) return; // Уже падает
-
-        Debug.Log($"{name} forced to fall");
-
-        // Останавливаем атаку на коробку
-        if (currentBoxController != null)
-        {
-            currentBoxController.StopTakingDamage();
-            currentBoxController = null;
-        }
-
-        // Запускаем падение
-        StartFalling();
-
-        // Можно добавить эффект (например, изменение цвета)
-        if (spriteRenderer != null)
-        {
-            // Временно меняем цвет на красный
-            StartCoroutine(FlashRed());
-        }
-    }
-
-    // Эффект мигания при падении
-    IEnumerator FlashRed()
-    {
-        Color originalColor = spriteRenderer.color;
-        spriteRenderer.color = Color.red;
-
-        yield return new WaitForSeconds(0.3f);
-
-        spriteRenderer.color = originalColor;
-
-        yield return new WaitForSeconds(0.3f);
-
-        spriteRenderer.color = Color.red;
-
-        yield return new WaitForSeconds(0.3f);
-
-        spriteRenderer.color = originalColor;
     }
 
     public void SetGameRunning(bool running)

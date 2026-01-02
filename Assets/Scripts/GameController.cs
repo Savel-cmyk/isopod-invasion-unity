@@ -1,7 +1,8 @@
-using UnityEngine;
-using UnityEngine.UI;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro; // Для TextMeshPro
+using UnityEngine;
+using UnityEngine.UI;
 
 public class GameController : MonoBehaviour
 {
@@ -107,6 +108,9 @@ public class GameController : MonoBehaviour
         if (mainGameCanvas != null)
             mainGameCanvas.gameObject.SetActive(true);
 
+        if (killCounterText != null)
+            killCounterText.gameObject.SetActive(true);
+
         // Скрываем экран конца игры
         if (gameOverCanvas != null)
             gameOverCanvas.gameObject.SetActive(false);
@@ -145,6 +149,12 @@ public class GameController : MonoBehaviour
         Invoke("ShowGameOverScreen", 2f);
     }
 
+    void ShowGameOverScreen()
+    {
+        // Вызываем стандартный конец игры
+        EndGame();
+    }
+
     void MakeAllIsopodsFall()
     {
         foreach (GameObject isopod in allIsopods)
@@ -154,25 +164,44 @@ public class GameController : MonoBehaviour
                 IsopodController controller = isopod.GetComponent<IsopodController>();
                 if (controller != null)
                 {
-                    // Заставляем жука упасть
+                    // Заставляем жука упасть (включая отмену респавна)
                     controller.ForceFall();
                 }
             }
         }
+
+        // Также обрабатываем неактивных жуков, которые ждут респавна
+        StartCoroutine(CleanupAllIsopods());
     }
 
-    void ShowGameOverScreen()
+    IEnumerator CleanupAllIsopods()
     {
-        // Вызываем стандартный конец игры
-        EndGame();
+        // Ждём немного чтобы все Invoke/корутины завершились
+        yield return new WaitForSeconds(1.5f);
+
+        // Принудительно деактивируем всех жуков
+        foreach (GameObject isopod in allIsopods)
+        {
+            if (isopod != null)
+            {
+                isopod.SetActive(false);
+            }
+        }
     }
 
+    // Обновите EndGame() чтобы отменить все Invoke
     void EndGame()
     {
         if (!isGameActive) return;
 
         isGameActive = false;
         Debug.Log("=== GAME ENDED ===");
+
+        // Отменяем все запланированные вызовы
+        CancelInvoke();
+
+        // Отменяем все корутины на этом объекте
+        StopAllCoroutines();
         Debug.Log($"Final score: {killCount}");
 
         // Деактивируем кнопку завершения
@@ -379,8 +408,6 @@ public class GameController : MonoBehaviour
             EndGame();
         }
     }
-
-
 
     // Метод для увеличения счётчика убийств (будет вызываться из IsopodController)
     public void AddKill()

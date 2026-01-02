@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "785613008634",
+    "project_id": "isopod-invasion-unity",
+    "storage_bucket": "isopod-invasion-unity.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:785613008634:android:e8c62b2710ca430e1a6343",
+        "android_client_info": {
+          "package_name": "com.koryakovtsev.isopodInvasion"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvBSq1ND8wh8gFE9coa8lzmEyKO0GgB8w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

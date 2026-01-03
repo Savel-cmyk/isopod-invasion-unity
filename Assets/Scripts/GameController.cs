@@ -10,8 +10,11 @@ public class GameController : MonoBehaviour
     public Canvas mainMenuCanvas;
     public Canvas mainGameCanvas; // Канвас для игры
     public Canvas gameOverCanvas; // Канвас для конца игры
+    public Canvas leaderboardCanvas;
     public Button startButton;
+    public Button leaderboardButton;
     public Button returnToMenuButton; // Кнопка на экране конца игры
+    public Button returnFromLeaderboardButton;
     public TextMeshProUGUI killCounterText; // Счётчик во время игры
     public TextMeshProUGUI finalScoreText; // Финальный счёт на экране конца игры
     public Button endGameButton; // Кнопка завершения игры
@@ -32,6 +35,11 @@ public class GameController : MonoBehaviour
     public float spacingX = 2f;
     public float spacingY = 1.5f;
 
+    [Header("Leaderboard UI")]
+    [SerializeField] private Transform leaderboardEntriesContainer;
+    [SerializeField] private GameObject leaderboardEntryPrefab;
+    [SerializeField] private TMP_FontAsset leaderboardFont;
+
     private List<GameObject> allBoxes = new List<GameObject>();
     private List<GameObject> allIsopods = new List<GameObject>();
     private int killCount = 0;
@@ -50,6 +58,9 @@ public class GameController : MonoBehaviour
         if (gameOverCanvas != null)
             gameOverCanvas.gameObject.SetActive(false);
 
+        if (leaderboardCanvas != null) // скрываем таблицу
+            leaderboardCanvas.gameObject.SetActive(false);
+
         // Показываем только меню
         if (mainMenuCanvas != null)
             mainMenuCanvas.gameObject.SetActive(true);
@@ -63,6 +74,7 @@ public class GameController : MonoBehaviour
 
         // Настраиваем все кнопки
         startButton.onClick.AddListener(StartGame);
+        leaderboardButton.onClick.AddListener(ShowLeaderboard);
         returnToMenuButton.onClick.AddListener(ReturnToMainMenu);
         endGameButton.onClick.AddListener(ForceEndGame); // Новая кнопка
 
@@ -72,6 +84,66 @@ public class GameController : MonoBehaviour
 
         // Настраиваем фоны
         SetupBackgrounds();
+
+        // Подписываемся на событие загрузки данных
+        if (FirebaseLeaderboardManager.Instance != null)
+        {
+            FirebaseLeaderboardManager.Instance.OnLeaderboardLoaded += PopulateLeaderboardUI;
+        }
+    }
+
+    private void PopulateLeaderboardUI(List<LeaderboardEntry> entries)
+    {
+        if (leaderboardEntriesContainer == null || leaderboardEntryPrefab == null)
+        {
+            Debug.LogError("Leaderboard UI references not set!");
+            return;
+        }
+
+        Debug.Log($"Populating leaderboard with {entries.Count} entries");
+
+        // Очищаем старые строки
+        foreach (Transform child in leaderboardEntriesContainer)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // Создаём новые строки
+        for (int i = 0; i < entries.Count; i++)
+        {
+            GameObject entryGO = Instantiate(leaderboardEntryPrefab, leaderboardEntriesContainer);
+            TMP_Text entryText = entryGO.GetComponent<TMP_Text>();
+
+            if (entryText == null)
+            {
+                Debug.LogError("Entry prefab has no TMP_Text component!");
+                continue;
+            }
+
+            // Применяем кастомный шрифт
+            if (leaderboardFont != null)
+            {
+                entryText.font = leaderboardFont;
+            }
+
+            // Форматируем строку
+            string place = (i + 1).ToString();
+            string name = entries[i].playerName;
+            string score = entries[i].score.ToString();
+            entryText.text = $"{place}. {name} - {score}";
+        }
+
+        // Если записей нет
+        if (entries.Count == 0)
+        {
+            GameObject emptyGO = Instantiate(leaderboardEntryPrefab, leaderboardEntriesContainer);
+            TMP_Text emptyText = emptyGO.GetComponent<TMP_Text>();
+            emptyText.text = "No records yet!";
+            emptyText.alignment = TextAlignmentOptions.Center;
+
+            if (leaderboardFont != null)
+                emptyText.font = leaderboardFont;
+        }
     }
 
     void SetupBackgrounds()
@@ -83,6 +155,39 @@ public class GameController : MonoBehaviour
         // Скрываем фон игры
         if (gameBackground != null)
             gameBackground.gameObject.SetActive(false);
+
+        // Можно добавить отдельный фон для таблицы
+        // if (leaderboardBackground != null)
+        //    leaderboardBackground.gameObject.SetActive(false);
+    }
+
+    public void ShowLeaderboard()
+    {
+        Debug.Log("Showing leaderboard...");
+
+        // Скрываем меню
+        if (mainMenuCanvas != null)
+            mainMenuCanvas.gameObject.SetActive(false);
+
+        // Показываем таблицу лидеров
+        if (leaderboardCanvas != null)
+        {
+            leaderboardCanvas.gameObject.SetActive(true);
+
+            // Загружаем данные
+            if (FirebaseLeaderboardManager.Instance != null)
+            {
+                FirebaseLeaderboardManager.Instance.LoadTop10Leaderboard();
+            }
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (FirebaseLeaderboardManager.Instance != null)
+        {
+            FirebaseLeaderboardManager.Instance.OnLeaderboardLoaded -= PopulateLeaderboardUI;
+        }
     }
 
     void StartGame()
@@ -153,6 +258,19 @@ public class GameController : MonoBehaviour
     {
         // Вызываем стандартный конец игры
         EndGame();
+    }
+
+    public void ReturnToMainMenuFromLeaderboard()
+    {
+        Debug.Log("Returning to main menu from leaderboard...");
+
+        // Скрываем таблицу
+        if (leaderboardCanvas != null)
+            leaderboardCanvas.gameObject.SetActive(false);
+
+        // Показываем меню
+        if (mainMenuCanvas != null)
+            mainMenuCanvas.gameObject.SetActive(true);
     }
 
     void MakeAllIsopodsFall()
@@ -236,6 +354,8 @@ public class GameController : MonoBehaviour
 
         // Очищаем игровые объекты (опционально)
         // ClearGameObjects();
+
+        FirebaseLeaderboardManager.Instance.SubmitScore(killCount, "PlayerName");
     }
 
     public void ReturnToMainMenu()

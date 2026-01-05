@@ -1,7 +1,7 @@
 using UnityEngine;
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using Firebase;
 using Firebase.Database;
 using Firebase.Extensions; // ƒл€ работы с задачами (Task) в Unity
 
@@ -38,32 +38,55 @@ public class FirebaseLeaderboardManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            InitializeFirebase();
+            
+            // Ќ≈ инициализируем Firebase здесь!
+            // ∆дем, когда FirebaseManager сделает это
+            StartCoroutine(WaitForFirebaseInitialization());
         }
         else
         {
             Destroy(gameObject);
         }
     }
-
-    void InitializeFirebase()
+    
+    IEnumerator WaitForFirebaseInitialization()
     {
-        FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task => {
-            var dependencyStatus = task.Result;
-            if (dependencyStatus == DependencyStatus.Available)
-            {
-                // Firebase готов к использованию
-                FirebaseApp app = FirebaseApp.DefaultInstance;
-                databaseReference = FirebaseDatabase.DefaultInstance.RootReference;
-                isFirebaseInitialized = true;
-                Debug.Log("Firebase успешно инициализирован.");
-            }
-            else
-            {
-                Debug.LogError($"Ќе удалось разрешить все зависимости Firebase: {dependencyStatus}");
-            }
-        });
+        // ∆дем пока FirebaseManager будет готов
+        while (FirebaseManager.Instance == null || !FirebaseManager.Instance.IsFirebaseReady())
+        {
+            yield return null;
+        }
+        
+        // “еперь можем использовать Firebase
+        InitializeDatabase();
     }
+    
+    void InitializeDatabase()
+    {
+        // ¬аш существующий код инициализации базы данных
+        databaseReference = FirebaseDatabase.DefaultInstance.RootReference;
+        isFirebaseInitialized = true;
+        Debug.Log("Firebase Database ready");
+    }
+
+    //void InitializeFirebase()
+    //{
+    //    FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task => {
+    //        var dependencyStatus = task.Result;
+    //        if (dependencyStatus == DependencyStatus.Available)
+    //        {
+    //            // Firebase готов к использованию
+    //            FirebaseApp app = FirebaseApp.DefaultInstance;
+    //            databaseReference = FirebaseDatabase.DefaultInstance.RootReference;
+    //            isFirebaseInitialized = true;
+    //            Debug.Log("Firebase успешно инициализирован.");
+    //        }
+    //        else
+    //        {
+    //            Debug.LogError($"Ќе удалось разрешить все зависимости Firebase: {dependencyStatus}");
+    //        }
+    //    });
+    //}
 
     public void SubmitScore(int score, string playerName = "Player")
     {

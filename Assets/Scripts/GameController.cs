@@ -163,6 +163,8 @@ public class GameController : MonoBehaviour
 
     public void ShowLeaderboard()
     {
+        GameAnalytics.LogButtonClick("Show_Leaderboard");
+
         Debug.Log("Showing leaderboard...");
 
         // Скрываем меню
@@ -193,6 +195,9 @@ public class GameController : MonoBehaviour
     void StartGame()
     {
         Debug.Log("=== GAME STARTING ===");
+
+        GameAnalytics.LogGameStart();
+        GameAnalytics.LogButtonClick("Start_Game");
 
         // Активируем кнопку завершения игры
         if (endGameButton != null)
@@ -247,17 +252,14 @@ public class GameController : MonoBehaviour
 
         Debug.Log("Game force ended by player");
 
+        GameAnalytics.LogForceGameEnd();
+        GameAnalytics.LogButtonClick("Force_End_Game");
+
         // Запускаем анимацию падения всех жуков
         MakeAllIsopodsFall();
 
         // Ждём немного и показываем результаты
-        Invoke("ShowGameOverScreen", 2f);
-    }
-
-    void ShowGameOverScreen()
-    {
-        // Вызываем стандартный конец игры
-        EndGame();
+        Invoke("EndGame", 2f);
     }
 
     public void ReturnToMainMenuFromLeaderboard()
@@ -315,6 +317,13 @@ public class GameController : MonoBehaviour
         isGameActive = false;
         Debug.Log("=== GAME ENDED ===");
 
+        // Определяем причину окончания
+        string endReason = "unknown";
+        if (activeIsopodsCount <= 0) endReason = "all_bugs_dead";
+
+        // СТАТИСТИКА: конец игры
+        GameAnalytics.LogGameEnd(killCount, endReason);
+
         // Отменяем все запланированные вызовы
         CancelInvoke();
 
@@ -352,14 +361,23 @@ public class GameController : MonoBehaviour
             }
         }
 
-        // Очищаем игровые объекты (опционально)
-        // ClearGameObjects();
-
-        FirebaseLeaderboardManager.Instance.SubmitScore(killCount, "PlayerName");
+        // Используем имя из менеджера
+        PlayerNameManager playerNameManager = FindObjectOfType<PlayerNameManager>();
+        if (playerNameManager != null)
+        {
+            playerNameManager.SubmitScoreToFirebase(killCount);
+        }
+        else
+        {
+            // Запасной вариант
+            FirebaseLeaderboardManager.Instance.SubmitScore(killCount, "Player");
+        }
     }
 
     public void ReturnToMainMenu()
     {
+        GameAnalytics.LogButtonClick("Return_To_Menu");
+
         Debug.Log("Returning to main menu");
 
         // Скрываем экран конца игры
@@ -534,6 +552,9 @@ public class GameController : MonoBehaviour
     {
         killCount++;
         UpdateKillCounter();
+
+        GameAnalytics.LogBugKilled(killCount, killCount);
+
         Debug.Log($"Kill count: {killCount}");
     }
 
@@ -610,5 +631,28 @@ public class GameController : MonoBehaviour
 
         if (boxesContainer != null)
             boxesContainer.gameObject.SetActive(false);
+    }
+
+    // Только для тестирования! Удалите в финальной версии
+    public void TestCrashButton()
+    {
+        Debug.Log("Testing Crashlytics...");
+        GameAnalytics.LogButtonClick("Test_Crash_Button");
+
+        // Способ 1: Искусственное исключение
+        // throw new System.Exception("Test crash from button");
+
+        // Способ 2: Null reference (более реалистично)
+        GameObject nullObject = null;
+        nullObject.name = "This will crash";
+    }
+
+    void Update()
+    {
+        // Тестовая клавиша (удобно для разработки)
+        if (Input.GetKeyDown(KeyCode.C) && Input.GetKey(KeyCode.LeftControl))
+        {
+            TestCrashButton();
+        }
     }
 }

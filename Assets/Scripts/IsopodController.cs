@@ -110,12 +110,19 @@ public class IsopodController : MonoBehaviour
 
     private void OnMouseDown()
     {
-        // Можно кликать только если игра активна
-        if (!isAlive || !canMove || isFalling || !IsGameActive()) return;
+        try
+        {
+            // Можно кликать только если игра активна
+            if (!isAlive || !canMove || isFalling || !IsGameActive()) return;
 
-        Debug.Log("Isopod clicked!");
-        TakeDamage(damagePerClick);
-        PlaySound(hitSound);
+            Debug.Log("Isopod clicked!");
+            TakeDamage(damagePerClick);
+            PlaySound(hitSound);
+        }
+        catch (System.Exception e)
+        {
+            GameAnalytics.LogError($"Click handling error: {e.Message}", name);
+        }
     }
 
     void HandleFalling()
@@ -348,32 +355,39 @@ public class IsopodController : MonoBehaviour
 
     void Respawn()
     {
-        if (gameController != null && !gameController.IsGameActive())
+        try
         {
-            gameObject.SetActive(false);
-            return;
+            if (gameController != null && !gameController.IsGameActive())
+            {
+                gameObject.SetActive(false);
+                return;
+            }
+
+            currentHealth = maxHealth;
+            isAlive = true;
+            hasReachedTarget = false;
+            isFalling = false;
+            transform.position = spawnPosition;
+
+            // Останавливаем атаку
+            if (currentBoxController != null)
+            {
+                currentBoxController.StopTakingDamage();
+                currentBoxController = null;
+            }
+
+            UpdateSprite();
+
+            // Просим GameController назначить новую коробку
+            if (gameController != null)
+            {
+                gameController.AssignNearestBoxToIsopod(this, assignedColumn);
+                canMove = true;
+            }
         }
-
-        currentHealth = maxHealth;
-        isAlive = true;
-        hasReachedTarget = false;
-        isFalling = false;
-        transform.position = spawnPosition;
-
-        // Останавливаем атаку
-        if (currentBoxController != null)
+        catch (System.Exception e)
         {
-            currentBoxController.StopTakingDamage();
-            currentBoxController = null;
-        }
-
-        UpdateSprite();
-
-        // Просим GameController назначить новую коробку
-        if (gameController != null)
-        {
-            gameController.AssignNearestBoxToIsopod(this, assignedColumn);
-            canMove = true;
+            GameAnalytics.LogError($"Respawn error: {e.Message}", name);
         }
     }
 

@@ -14,18 +14,31 @@ jobs:
     name: Build for Android (APK)
     runs-on: ubuntu-latest
     steps:
-      # Шаг 1: Клонируем код репозитория
+      # НОВЫЙ ШАГ 1: Очистка диска перед началом сборки
+      - name: Free disk space
+        run: |
+          # Остановка всех Docker-контейнеров и удаление ненужных данных
+          sudo docker system prune -a --force --volumes 2>/dev/null || true
+          # Дополнительная очистка системы
+          sudo apt-get clean
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      # НОВЫЙ ШАГ 2: Мониторинг свободного места перед сборкой
+      - name: Check available disk space
+        run: df -h
+
+      # Шаг 3: Клонируем код репозитория
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Шаг 2: Инициализируем Git LFS для ассетов
+      # Шаг 4: Инициализируем Git LFS для ассетов
       - name: Git LFS Pull
         run: |
           git lfs pull
           git add .
           git reset --hard
 
-      # Шаг 3: Восстанавливаем кэш папки Library для ускорения
+      # Шаг 5: Восстанавливаем кэш папки Library для ускорения
       - name: Restore Library cache
         uses: actions/cache@v4
         with:
@@ -34,7 +47,7 @@ jobs:
           restore-keys: |
             Library-
 
-      # Шаг 4: Используем GameCI Builder для сборки под Android
+      # Шаг 6: Используем GameCI Builder для сборки под Android
       - name: Build Android project
         uses: game-ci/unity-builder@v4
         env:
@@ -49,7 +62,7 @@ jobs:
           androidExportType: 'androidPackage'  # По умолчанию 'androidPackage' для .apk
           # Для сборки AAB (Android App Bundle) укажите 'androidAppBundle'
 
-      # Шаг 5: Загружаем собранный APK как артефакт
+      # Шаг 7: Загружаем собранный APK как артефакт
       - name: Upload Android APK artifact
         uses: actions/upload-artifact@v4
         with:

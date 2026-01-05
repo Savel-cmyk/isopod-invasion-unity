@@ -1,0 +1,57 @@
+name: Build Unity Project for Android
+
+# Триггер: запускать при пуше в ветку master
+on:
+  push:
+    branches: [ "master" ]
+
+# НОВОЕ: Добавляем пароль в окружение (лучше через secrets, но в env тоже нужно для unity-builder)
+env:
+  UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}  # Необходимо для корректной работы
+
+jobs:
+  buildForAndroid:
+    name: Build for Android (APK)
+    runs-on: ubuntu-latest
+    steps:
+      # Шаг 1: Клонируем код репозитория
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Шаг 2: Инициализируем Git LFS для ассетов
+      - name: Git LFS Pull
+        run: |
+          git lfs pull
+          git add .
+          git reset --hard
+
+      # Шаг 3: Восстанавливаем кэш папки Library для ускорения
+      - name: Restore Library cache
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ github.sha }}
+          restore-keys: |
+            Library-
+
+      # Шаг 4: Используем GameCI Builder для сборки под Android
+      - name: Build Android project
+        uses: game-ci/unity-builder@v4
+        env:
+          # НОВЫЙ СПОСОБ: передаем email и пароль для активации (а не файл лицензии)
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          # Указываем целевую платформу - Android
+          targetPlatform: Android
+          # Опционально: можно указать тип выходного файла (apk или aab)
+          androidExportType: 'androidPackage'  # По умолчанию 'androidPackage' для .apk
+          # Для сборки AAB (Android App Bundle) укажите 'androidAppBundle'
+
+      # Шаг 5: Загружаем собранный APK как артефакт
+      - name: Upload Android APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-Build
+          path: build/Android/  # Изменился путь для Android

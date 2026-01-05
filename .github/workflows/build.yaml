@@ -85,11 +85,9 @@ jobs:
           name: Android-Build
           # Должно совпадать с именем артефакта в job
 
-      # Шаг 2: Распаковываем ZIP, чтобы получить APK внутри
-      - name: Extract APK from archive
-        run: |
-          # Ищем ZIP-файл в текущей папке (обычно называется Android-Build.zip)
-          unzip -o "*.zip"
+      # Шаг 2: (ОТЛАДКА) Показываем структуру файлов (можно удалить после успешной работы)
+      - name: List downloaded files
+        run: find . -type f -name "*.apk" || echo "No APK files found directly. Listing all files:" && ls -R
 
       # Шаг 3: Создаем GitHub Release
       - name: Create GitHub Release
@@ -100,5 +98,5 @@ jobs:
           # Если есть файл CHANGELOG.md, можно добавить его сюда
           # body_path: CHANGELOG.md
           files: |
-            *.apk
+            **/*.apk
           overwrite_files: true

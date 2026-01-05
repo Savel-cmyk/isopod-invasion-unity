@@ -1,9 +1,9 @@
-name: Build Unity Project for Android
+name: Build and Release Unity Project for Android
 
 # Триггер: запускать при пуше в ветку master
 on:
   push:
-    branches: [ "master" ]
+    tags: [ 'v*.*.*' ]
 
 # НОВОЕ: Добавляем пароль в окружение (лучше через secrets, но в env тоже нужно для unity-builder)
 env:
@@ -14,11 +14,11 @@ jobs:
     name: Build for Android (APK)
     runs-on: ubuntu-latest
     steps:
-      # Шаг 3: Клонируем код репозитория
+      # Шаг 1: Клонируем код репозитория
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # НОВЫЙ ШАГ 1: Очистка диска перед началом сборки
+      # Шаг 2: Очистка диска перед началом сборки
       - name: Free disk space
         run: |
           # Остановка всех Docker-контейнеров и удаление ненужных данных
@@ -27,7 +27,7 @@ jobs:
           sudo apt-get clean
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
 
-      # НОВЫЙ ШАГ 2: Мониторинг свободного места перед сборкой
+      # Шаг 3: Мониторинг свободного места перед сборкой
       - name: Check available disk space
         run: df -h
 
@@ -68,3 +68,29 @@ jobs:
         with:
           name: Android-Build
           path: build/Android/  # Изменился путь для Android
+
+  create_release:
+    # Этот job выполнится только после успешной сборки
+    needs: buildForAndroid
+    runs-on: ubuntu-latest
+    # Даем разрешение на запись в репозиторий (необходимо для создания релиза)
+    permissions:
+      contents: write
+
+    steps:
+      # Шаг 1: Скачиваем APK, который собрал предыдущий job
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Android-Build # Должно совпадать с именем артефакта в job
+
+      # Шаг 2: Создаем GitHub Release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Имя тега берется из триггера (например, v1.0.0)
+          tag_name: ${{ github.ref_name }}
+          # Если есть файл CHANGELOG.md, можно добавить его сюда
+          # body_path: CHANGELOG.md
+          files: |
+            *.apk # Прикрепляем все скачанные APK-файлы к релизу
